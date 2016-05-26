@@ -33,12 +33,13 @@ class AdminResubmitBaseWidget(BaseWidget):
         self.input_name = "%s_cache_key" % name
         self.cache_key = data.get(self.input_name, "")
 
+        cache = self.cache_instance()
         if name in files:
             self.cache_key = self.random_key()[:10]
             upload = files[name]
-            FileCache().set(self.cache_key, upload)
+            cache.set(self.cache_key, upload)
         elif self.cache_key:
-            restored = FileCache().get(self.cache_key, name)
+            restored = cache.get(self.cache_key, name)
             if restored:
                 upload = restored
                 files[name] = upload
@@ -63,6 +64,9 @@ class AdminResubmitBaseWidget(BaseWidget):
         if value:
             return os.path.split(value.name)[-1]
 
+    def cache_instance(self):
+        return FileCache()
+
 
 class AdminResubmitFileWidget(AdminResubmitBaseWidget):
     template_with_initial = ClearableFileInput.template_with_initial
@@ -83,11 +87,14 @@ class AdminResubmitImageWidget(AdminResubmitBaseWidget):
 
 
 class AdminResubmitMixin(object):
+    ResubmitImageWidget = AdminResubmitImageWidget
+    ResubmitFileWidget = AdminResubmitFileWidget
+
     def formfield_for_dbfield(self, db_field, **kwargs):
         if isinstance(db_field, ImageField):
-            return db_field.formfield(widget=AdminResubmitImageWidget)
+            return db_field.formfield(widget=self.ResubmitImageWidget)
         elif isinstance(db_field, models.FileField):
-            return db_field.formfield(widget=AdminResubmitFileWidget)
+            return db_field.formfield(widget=self.ResubmitFileWidget)
         else:
             return super(AdminResubmitMixin, self).formfield_for_dbfield(
                 db_field, **kwargs)
